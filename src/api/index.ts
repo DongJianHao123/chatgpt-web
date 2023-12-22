@@ -82,3 +82,18 @@ export const getHunyuanChat = (question: string, onDownloadProgress: (progressEv
     throw err
   })
 }
+
+export const getVectorDB = (content: string, documentName: string, limit = 3) => {
+  return axios<string[]>({
+    method: 'post',
+    url: '/vector-api/vector-db/qury',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: {
+      content,
+      documentName,
+      limit,
+    },
+  })
+}

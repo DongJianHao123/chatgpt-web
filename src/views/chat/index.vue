@@ -1,20 +1,20 @@
 <script setup lang='ts'>
+import html2canvas from 'html2canvas'
+import { NAutoComplete, NButton, NInput, NSelect, useDialog, useMessage } from 'naive-ui'
+import { storeToRefs } from 'pinia'
 import type { Ref } from 'vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { storeToRefs } from 'pinia'
-import { NAutoComplete, NButton, NInput, useDialog, useMessage } from 'naive-ui'
-import html2canvas from 'html2canvas'
 import { Message } from './components'
-import { useScroll } from './hooks/useScroll'
-import { useChat } from './hooks/useChat'
-import { useUsingContext } from './hooks/useUsingContext'
 import HeaderComponent from './components/Header/index.vue'
-import { HoverButton, SvgIcon } from '@/components/common'
-import { useBasicLayout } from '@/hooks/useBasicLayout'
-import { useChatStore, usePromptStore } from '@/store'
-import { fetchChatAPIProcess, getHunyuanChat } from '@/api'
+import { useChat } from './hooks/useChat'
+import { useScroll } from './hooks/useScroll'
+import { useUsingContext } from './hooks/useUsingContext'
 import { t } from '@/locales'
+import { useBasicLayout } from '@/hooks/useBasicLayout'
+import { HoverButton, SvgIcon } from '@/components/common'
+import { fetchChatAPIProcess, getHunyuanChat, getVectorDB } from '@/api'
+import { useChatStore, usePromptStore } from '@/store'
 
 let controller = new AbortController()
 
@@ -39,6 +39,13 @@ const conversationList = computed(() => dataSources.value.filter(item => (!item.
 const prompt = ref<string>('')
 const loading = ref<boolean>(false)
 const inputRef = ref<Ref | null>(null)
+const documentName = ref()
+
+const documentNames = [
+  { label: '全部', value: 'all' },
+  { label: 'faq', value: 'faq.md' },
+  { label: 'usb', value: 'usb.md' },
+]
 
 // 添加PromptStore
 const promptStore = usePromptStore()
@@ -53,7 +60,14 @@ dataSources.value.forEach((item, index) => {
 })
 
 function handleSubmit() {
-  onConversation()
+  if (documentName.value) {
+    getVectorDB(prompt.value, documentName.value === 'all' ? '' : documentName.value, 5).then((res) => {
+      onConversation(res.data.join('\n'))
+    })
+  }
+  else {
+    onConversation()
+  }
 }
 
 const handleHunyuanAnswer = (responseText: string, message: string) => {
@@ -84,7 +98,7 @@ const handleHunyuanAnswer = (responseText: string, message: string) => {
       inversion: false,
       error: false,
       loading: isItemLoading,
-      requestOptions: { prompt: message, options: { } },
+      requestOptions: { prompt: message, options: {} },
     },
   )
 
@@ -102,7 +116,7 @@ const hunyuanSend = (question: string) => {
   })
 }
 
-async function onConversation() {
+async function onConversation(vectorData?: string) {
   const message = prompt.value
 
   if (loading.value)
@@ -148,8 +162,11 @@ async function onConversation() {
     },
   )
   scrollToBottom()
+
+  const _message = vectorData ? `${vectorData}\n基于以上信息，回答如下问题，如果没有相关性，就忽略上面的信息，回答问题你也可以加一些你的理解或修饰。\n问题：\n${message}` : message
+
   try {
-    hunyuanSend(message)
+    hunyuanSend(_message)
   }
   catch (error) {
 
@@ -520,7 +537,7 @@ onUnmounted(() => {
   <div class="flex flex-col w-full h-full">
     <HeaderComponent v-if="isMobile" :using-context="usingContext" @export="handleExport" @handle-clear="handleClear" />
     <main class="flex-1 overflow-hidden">
-      <div id="scrollRef" ref="scrollRef" class="h-full overflow-hidden overflow-y-auto">
+      <div id="scrollRef" ref="scrollRef" style="position: relative;" class="h-full overflow-hidden overflow-y-auto">
         <div
           id="image-wrapper" class="w-full max-w-screen-xl m-auto dark:bg-[#101014]"
           :class="[isMobile ? 'p-2' : 'p-4']"
@@ -569,6 +586,10 @@ onUnmounted(() => {
               <SvgIcon icon="ri:chat-history-line" />
             </span>
           </HoverButton>
+          <NSelect
+            v-model:value="documentName" placeholder="未使用向量数据库" style="width: 20%;" placement="top"
+            :options="documentNames" clearable
+          />
           <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
             <template #default="{ handleInput, handleBlur, handleFocus }">
               <NInput

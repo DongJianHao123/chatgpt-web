@@ -46,6 +46,11 @@ export default defineConfig((env) => {
           changeOrigin: true, // 允许跨域
           rewrite: path => path.replace('/hunyuan-api/', '/'),
         },
+        '/vector-api': {
+          target: viteEnv.VITE_APP_VECTOR_DB_API_URL,
+          changeOrigin: true, // 允许跨域
+          rewrite: path => path.replace('/vector-api/', '/'),
+        },
       },
     },
     build: {
