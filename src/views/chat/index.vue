@@ -13,7 +13,7 @@ import { useUsingContext } from './hooks/useUsingContext'
 import { t } from '@/locales'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { HoverButton, SvgIcon } from '@/components/common'
-import { fetchChatAPIProcess, getHunyuanChat, getVectorDB } from '@/api'
+import { fetchChatAPIProcess, getAllDocumentSets, getHunyuanChat, quryVectorDB } from '@/api'
 import { useChatStore, usePromptStore } from '@/store'
 
 let controller = new AbortController()
@@ -39,13 +39,9 @@ const conversationList = computed(() => dataSources.value.filter(item => (!item.
 const prompt = ref<string>('')
 const loading = ref<boolean>(false)
 const inputRef = ref<Ref | null>(null)
-const documentName = ref()
 
-const documentNames = [
-  { label: '全部', value: 'all' },
-  { label: 'faq', value: 'faq.md' },
-  { label: 'usb', value: 'usb.md' },
-]
+const documentName = ref<string>()
+const documentNames = ref<{ label: string; value: string }[]>()
 
 // 添加PromptStore
 const promptStore = usePromptStore()
@@ -59,9 +55,17 @@ dataSources.value.forEach((item, index) => {
     updateChatSome(+uuid, index, { loading: false })
 })
 
+const initDocumentNames = () => {
+  getAllDocumentSets().then((res) => {
+    const _res = res.data.map(item => ({ label: item.documentSetName.split('.')[0] ?? item.documentSetName, value: item.documentSetName }))
+    _res.unshift({ label: '全部', value: 'all' })
+    documentNames.value = _res
+  })
+}
+
 function handleSubmit() {
   if (documentName.value) {
-    getVectorDB(prompt.value, documentName.value === 'all' ? '' : documentName.value, 5).then((res) => {
+    quryVectorDB(prompt.value, documentName.value === 'all' ? '' : documentName.value, 5).then((res) => {
       onConversation(res.data.join('\n'))
     })
   }
@@ -525,6 +529,7 @@ onMounted(() => {
   scrollToBottom()
   if (inputRef.value && !isMobile.value)
     inputRef.value?.focus()
+  initDocumentNames()
 })
 
 onUnmounted(() => {
@@ -587,8 +592,8 @@ onUnmounted(() => {
             </span>
           </HoverButton>
           <NSelect
-            v-model:value="documentName" placeholder="未使用向量数据库" style="width: 20%;" placement="top"
-            :options="documentNames" clearable
+            v-model:value="documentName" placeholder="未使用向量数据库" placement="top" :options="documentNames"
+            clearable
           />
           <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
             <template #default="{ handleInput, handleBlur, handleFocus }">
@@ -611,3 +616,14 @@ onUnmounted(() => {
     </footer>
   </div>
 </template>
+
+<style lang="less">
+.n-select {
+  width: 20%;
+}
+@media screen and (max-width: 767px) {
+    .n-select {
+      width: 60%; // 仅作为示例，为手机屏幕应用背景色
+   }
+}
+</style>

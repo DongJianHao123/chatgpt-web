@@ -83,7 +83,7 @@ export const getHunyuanChat = (question: string, onDownloadProgress: (progressEv
   })
 }
 
-export const getVectorDB = (content: string, documentName: string, limit = 3) => {
+export const quryVectorDB = (content: string, documentName: string, limit = 3) => {
   return axios<string[]>({
     method: 'post',
     url: '/vector-api/vector-db/qury',
@@ -95,5 +95,12 @@ export const getVectorDB = (content: string, documentName: string, limit = 3) =>
       documentName,
       limit,
     },
+  })
+}
+
+export const getAllDocumentSets = () => {
+  return axios <vectorDB.DocumentSet[]> ({
+    method: 'get',
+    url: '/vector-api/vector-db/get_all_files',
   })
 }
