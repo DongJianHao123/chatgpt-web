@@ -13,7 +13,7 @@ import { useUsingContext } from './hooks/useUsingContext'
 import { t } from '@/locales'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { HoverButton, SvgIcon } from '@/components/common'
-import { fetchChatAPIProcess, getAllDocumentSets, getHunyuanChat, quryVectorDB } from '@/api'
+import { QueryType, fetchChatAPIProcess, getAllDocumentSets, getHunyuanChat, queryVectorDB } from '@/api'
 import { useChatStore, usePromptStore } from '@/store'
 
 let controller = new AbortController()
@@ -41,7 +41,7 @@ const loading = ref<boolean>(false)
 const inputRef = ref<Ref | null>(null)
 
 const documentName = ref<string>()
-const documentNames = ref<{ label: string; value: string }[]>()
+const documentNames = ref<{ label: string; value: string; title?: string }[]>([])
 
 // 添加PromptStore
 const promptStore = usePromptStore()
@@ -57,7 +57,16 @@ dataSources.value.forEach((item, index) => {
 
 const initDocumentNames = () => {
   getAllDocumentSets().then((res) => {
-    const _res = res.data.map(item => ({ label: item.documentSetName.split('.')[0] ?? item.documentSetName, value: item.documentSetName }))
+    const _res: { label: string; value: string; title?: string }[] = []
+    res.data.forEach((item) => {
+      if (!item.title) {
+        _res.push({ label: item.documentSetName.split('.')[0] ?? item.documentSetName, value: item.documentSetName })
+      }
+      else {
+        if (_res.findIndex(_r => _r.title === item.title) < 0)
+          _res.push({ label: item.title, value: item.title, title: item.title })
+      }
+    })
     _res.unshift({ label: '全部', value: 'all' })
     documentNames.value = _res
   })
@@ -65,7 +74,8 @@ const initDocumentNames = () => {
 
 function handleSubmit() {
   if (documentName.value) {
-    quryVectorDB(prompt.value, documentName.value === 'all' ? '' : documentName.value, 5).then((res) => {
+    const useIndex = documentNames.value.find(item => item.value === documentName.value)?.title
+    queryVectorDB(prompt.value, documentName.value === 'all' ? '' : documentName.value, 5, useIndex ? QueryType.INDEX : QueryType.DOCUMENT_NAME).then((res) => {
       onConversation(res.data.join('\n'))
     })
   }
@@ -619,11 +629,12 @@ onUnmounted(() => {
 
 <style lang="less">
 .n-select {
-  width: 20%;
+width: 40%;
 }
+
 @media screen and (max-width: 767px) {
-    .n-select {
-      width: 60%; // 仅作为示例，为手机屏幕应用背景色
-   }
+.n-select {
+width: 60%;
+}
 }
 </style>

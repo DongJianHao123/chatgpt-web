@@ -4,6 +4,7 @@ declare namespace vectorDB {
 		documentSetId: string,
 		documentSetName: string,
 		textPrefix: string,
-		documentSetInfo: string
+		documentSetInfo: string,
+		title?:string
 	}
 }
