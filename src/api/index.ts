@@ -91,7 +91,7 @@ export const QueryType = {
 export const queryVectorDB = (content: string, fieldValue: string, limit = 3, queryType = QueryType.DOCUMENT_NAME) => {
   return axios<string[]>({
     method: 'post',
-    url: '/vector-api/vector-db/query',
+    url: '/vector-api/vector-db/query_text',
     headers: {
       'Content-Type': 'application/json',
     },
